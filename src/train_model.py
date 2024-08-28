@@ -1,52 +1,66 @@
 from sklearn.model_selection import train_test_split
 import pandas as pd
 import numpy as np
+import platform
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
+
+if True:
+    import sys
+    system = platform.system()
+    if system == "Windows":
+        sys.path.insert(0, 'C:/Users/Lorenzo/Desktop/Workspace/Github/Project-4/src')
+    elif system == "Darwin":
+        sys.path.insert(0, '/Users/lorenzogurrola/workspace/github.com/LorenzoGurrola/Project-4/src')
+    from data_loader import prepare_train, prepare_test
+
+class NeuralNetwork(nn.Module):
+    def __init__(self, n, h):
+        super(NeuralNetwork, self).__init__()
+        self.l1 = nn.Linear(n, h)
+        self.l2 = nn.Linear(h, 1)
+    
+    def forward(self, X):
+        A1 = F.relu(self.l1(X))
+        A2 = torch.sigmoid(self.l2(A1))
+        return A2
 
 def load_data():
-    std_dev = 1
-    mean = 5
-    x1 = np.linspace(1, 9, 100)
-    x2 = np.linspace(3, 11, 100)
-    y = ((x1 > 6) & (x2 > 9)).astype(int)
-    X = np.stack((x1, x2), axis=1)
-    X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8, random_state=10)
-    y_train = np.reshape(y_train, (y_train.shape[0], 1))
-    y_test = np.reshape(y_test, (y_test.shape[0], 1))
-    return X_train, X_test, y_train, y_test
+    data = pd.read_csv('../framingham.csv')
+    data = data.dropna()
+    train, test = train_test_split(data, train_size=0.85, random_state=10)
+    X_train, y_train, scalers = prepare_train(train)
+    X_test, y_test = prepare_test(test, scalers)
+    return X_train, y_train, X_test, y_test
 
-def initialize_params(X):
-    n = X.shape[1]
-    w = np.random.randn(n, 1) * 0.1
-    b = np.zeros((1, 1))
-    params = {'w':w, 'b':b}
+def initialize_params(n, h):
+    W1 = np.random.randn(n, h) * 0.1
+    b1 = np.zeros((1, h))
+    W2 = np.random.randn(h, 1) * 0.1
+    b2 = np.zeros((1, 1))
+    params = {'W1':W1, 'b1':b1, 'W2':W2, 'b2':b2}
+    param_count = n * h + 2 * h + 1
+    print(f'initialized {param_count} total trainable params with {h} hidden units and {n} input features')
     return params
+
+def relu(z):
+    return np.maximum(0, z)
 
 def sigmoid(z):
     a = 1/(1 + np.exp(-z))
     return a
 
 def forward_prop(X, params):
-    w = params['w']
-    b = params['b']
-    z = X @ w + b
-    inter_vals = {'z':z}
-    yhat = sigmoid(z)
-    return yhat, inter_vals
+    W1 = params['W1']
+    b1 = params['b1']
+    W2 = params['W2']
+    b2 = params['b2']
 
-def calculate_cost(yhat, y):
-    m = y.shape[0]
-    losses = y * np.log(yhat) + (1 - y) * np.log(1 - yhat)
-    cost = -np.sum(losses, axis=0, keepdims=True)/m
-    return cost
+    Z1 = X @ W1 + b1
+    A1 = relu(Z1)
 
-def back_prop(y, yhat, inter_vals, X):
-    m = y.shape[0]
-    dc_dyhat = (-1/m) * ((y/yhat) - ((1-y)/(1-yhat)))
-    dyhat_dz = yhat * (1 - yhat)
-    dc_dz = dc_dyhat * dyhat_dz
-    dc_dw = np.matmul(X.T, dc_dz)
-    dc_db = np.sum(dc_dz, axis=0, keepdims=True)
-    grads = {'dw':dc_dw, 'db':dc_db}
-    return grads
+    Z2 = A1 @ W2 + b2
+    A2 = sigmoid(Z2)
+
+    return A2
