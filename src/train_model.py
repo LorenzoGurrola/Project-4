@@ -37,9 +37,9 @@ def load_data():
 def initialize_params(n, h):
     W1 = np.random.randn(n, h) * 0.1
     b1 = np.zeros((1, h))
-    W2 = np.random.randn(h, 1) * 0.1
+    w2 = np.random.randn(h, 1) * 0.1
     b2 = np.zeros((1, 1))
-    params = {'W1':W1, 'b1':b1, 'W2':W2, 'b2':b2}
+    params = {'W1':W1, 'b1':b1, 'w2':w2, 'b2':b2}
     param_count = n * h + 2 * h + 1
     print(f'initialized {param_count} total trainable params with {h} hidden units and {n} input features')
     return params
@@ -51,16 +51,16 @@ def sigmoid(z):
     a = 1/(1 + np.exp(-z))
     return a
 
-def forward_prop(X, params):
+def forward(X, params):
     W1 = params['W1']
     b1 = params['b1']
-    W2 = params['W2']
+    w2 = params['w2']
     b2 = params['b2']
 
     Z1 = X @ W1 + b1
     A1 = relu(Z1)
 
-    Z2 = A1 @ W2 + b2
-    A2 = sigmoid(Z2)
+    z2 = A1 @ w2 + b2
+    a2 = sigmoid(z2)
 
-    return A2
+    return a2
